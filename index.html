@@ -251,9 +251,7 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
       setTimeout(()=>div.classList.remove('glow'),1000);
     });
 
-    // إضافة خاصية العرض/الإخفاء
     marker._visible=true;
-
     all.push({marker,data:d});
 
     if(![...blockSelect.options].some(o=>o.value===d.block))
@@ -283,13 +281,17 @@ function update(){
   });
 
   if(currentBlock){
-    const d = all.find(o=>o.data.block===currentBlock).data;
-    stat1.innerHTML=`<b>القطاع:</b> ${d.sector}`;
-    stat2.innerHTML=`<b>البلك:</b> ${d.block} (${tr(d.usage)})`;
-    stat3.innerHTML=`<b>الحالة:</b> ${STATUS_LABEL[d.status]}`;
-    stat4.innerHTML=`<b>المساحة:</b> ${fmt(d.area)} م²`;
-    stat5.innerHTML=`<b>عدد القطع:</b> ${d.plots_count}`;
-    map.flyTo([+d.lat,+d.lng],18,{duration:1.2});
+    // تعديل الزوم ليبحث ضمن القطاع الحالي إذا محدد أو أي قطاع آخر
+    const dObj = all.find(o => o.data.block === currentBlock && (!currentSector || o.data.sector === currentSector));
+    if(dObj){
+      const d = dObj.data;
+      stat1.innerHTML=`<b>القطاع:</b> ${d.sector}`;
+      stat2.innerHTML=`<b>البلك:</b> ${d.block} (${tr(d.usage)})`;
+      stat3.innerHTML=`<b>الحالة:</b> ${STATUS_LABEL[d.status]}`;
+      stat4.innerHTML=`<b>المساحة:</b> ${fmt(d.area)} م²`;
+      stat5.innerHTML=`<b>عدد القطع:</b> ${d.plots_count}`;
+      map.flyTo([+d.lat,+d.lng],18,{duration:1.2});
+    }
   } else {
     stat1.innerHTML=stat2.innerHTML=stat3.innerHTML=stat4.innerHTML=stat5.innerHTML='';
     map.setView([24.17556,47.27167],15);
