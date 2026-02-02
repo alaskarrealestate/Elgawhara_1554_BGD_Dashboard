@@ -97,8 +97,32 @@ select,button{width:100%;padding:10px;font-size:15px;border-radius:8px;margin-to
 #clearBtn{background:#c62828;color:#fff;border:none;}
 
 /* ===== الإحصائيات ===== */
-.stats{background:#f3f6f9;border-radius:10px;padding:10px;margin-top:10px;}
-.stat{font-size:14px;margin:4px 0;}
+.stats{
+  background:linear-gradient(180deg,#0f172a,#111827);
+  border-radius:16px;
+  padding:14px;
+  margin-top:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.25);
+  color:#fff;
+}
+.stats .title{
+  color:#e5e7eb;
+  font-size:16px;
+  margin-bottom:8px;
+}
+.stat{
+  background:rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:10px 12px;
+  margin:6px 0;
+  font-size:14px;
+  line-height:1.6;
+}
+.stat b{color:#38bdf8}
+.stat:last-child{
+  background:linear-gradient(135deg,#2563eb,#1e40af);
+  font-weight:600;
+}
 .footer-logo{text-align:center;margin:14px 0;}
 .footer-logo img{width:80px;}
 .contact-box{text-align:center;}
@@ -299,6 +323,8 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
 }});
 
 function update(){
+  let sc=0,sr=0,pc=0,pr=0,area=0;
+
   all.forEach(o=>{
     const visible = (!currentSector || o.data.sector===currentSector) && (!currentBlock || o.data.block===currentBlock);
     if(visible && !o._visible){
@@ -306,10 +332,16 @@ function update(){
     } else if(!visible && o._visible){
       map.removeLayer(o.marker); o._visible=false;
     }
+
+    if(currentSector && o.data.sector===currentSector){
+      area+=+o.data.area;
+      if(o.data.usage==='commercial'){sc++;pc+=+o.data.plots_count;}
+      else{sr++;pr+=+o.data.plots_count;}
+    }
   });
 
   if(currentBlock){
-    const dObj = all.find(o => o.data.block===currentBlock && (!currentSector || o.data.sector===currentSector));
+    const dObj = all.find(o=>o.data.block===currentBlock && (!currentSector || o.data.sector===currentSector));
     if(dObj){
       const d=dObj.data;
       stat1.innerHTML=`<b>القطاع:</b> ${d.sector}`;
@@ -319,6 +351,13 @@ function update(){
       stat5.innerHTML=`<b>عدد القطع:</b> ${d.plots_count}`;
       map.flyTo([+d.lat,+d.lng],18,{duration:1.2});
     }
+  } else if(currentSector){
+    stat1.innerHTML=`<b>القطاع:</b> ${currentSector}`;
+    stat2.innerHTML=`عدد البلكات التجارية: ${sc}`;
+    stat3.innerHTML=`عدد البلكات السكنية: ${sr}`;
+    stat4.innerHTML=`عدد القطع التجارية: ${pc}`;
+    stat5.innerHTML=`عدد القطع السكنية: ${pr}<br>المساحة الإجمالية: ${fmt(area)} م²`;
+    map.setView([24.17556,47.27167],15);
   } else {
     stat1.innerHTML=stat2.innerHTML=stat3.innerHTML=stat4.innerHTML=stat5.innerHTML='';
     map.setView([24.17556,47.27167],15);
