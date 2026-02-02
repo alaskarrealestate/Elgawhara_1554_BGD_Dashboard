@@ -22,36 +22,45 @@ body{margin:0;font-family:"Segoe UI",Tahoma,Arial;background:#f2f4f7;}
   height:72px;
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start; /* نقل الشعار والاسم للجهة الأخرى */
   padding:0 14px;
   z-index:1000;
   box-shadow:0 2px 8px rgba(0,0,0,.15);
   background: linear-gradient(90deg,#6a11cb,#2575fc);
 }
-#topbar .right-section{
+#topbar .left-section{
   display:flex;
   align-items:center;
   gap:10px;
   white-space:nowrap;
   overflow:hidden;
 }
-#topbar .right-section img{height:50px;}
+#topbar img{height:50px;}
 #topbar .subtitle{
   font-family:'Scheherazade New',serif;
   font-size:20px;
   font-weight:700;
   color:#fff;
 }
-#installBtnTop{
-  background:#ff9800;
+
+/* ===== زر التثبيت العائم ===== */
+#installFab{
+  position:fixed;
+  bottom:24px;
+  left:24px;
+  z-index:2000;
+  display:none;
+  background:linear-gradient(135deg,#ff9800,#f57c00);
   color:#fff;
   border:none;
-  border-radius:6px;
-  padding:6px 12px;
-  font-size:14px;
+  border-radius:30px;
+  padding:14px 22px;
+  font-size:15px;
+  font-weight:600;
   cursor:pointer;
-  flex-shrink:0;
+  box-shadow:0 6px 18px rgba(0,0,0,.3);
 }
+#installFab:hover{opacity:.95;}
 
 /* ===== التخطيط ===== */
 #container{display:flex;flex-direction:row-reverse;height:100vh;margin-top:72px;}
@@ -129,19 +138,20 @@ select,button{width:100%;padding:10px;font-size:15px;border-radius:8px;margin-to
   #topbar{height:56px;padding:0 10px;}
   #topbar img{height:40px;}
   .subtitle{font-size:16px;}
-  #installBtnTop{padding:5px 10px;font-size:12px;}
+  #installFab{bottom:16px;left:16px;padding:12px 18px;font-size:13px;}
 }
 </style>
 </head>
 
 <body>
 <div id="topbar">
-  <button id="installBtnTop">📲 تثبيت</button>
-  <div class="right-section">
+  <div class="left-section">
     <img src="logo_alsakar.png" alt="Logo">
     <span class="subtitle">مجموعة صالح عبدالله العسكر للتطوير والاستثمار العقاري</span>
   </div>
 </div>
+
+<button id="installFab">📲 تثبيت التطبيق</button>
 
 <div id="container">
   <div id="sidebar">
@@ -193,28 +203,49 @@ select,button{width:100%;padding:10px;font-size:15px;border-radius:8px;margin-to
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <script>
-let deferredPrompt;
-const installBtnTop=document.getElementById('installBtnTop');
-installBtnTop.onclick=async()=>{
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt=null;
-  installBtnTop.style.display='none';
-};
+/* ===== PWA Install Logic (مستقر ونهائي) ===== */
+let deferredPrompt=null;
+const installFab=document.getElementById('installFab');
+
+function isInstalled(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+
+function refreshInstallButton(){
+  if(isInstalled()){
+    installFab.style.display='none';
+  }
+}
+
+refreshInstallButton();
+
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   deferredPrompt=e;
-  installBtnTop.style.display='block';
+  if(!isInstalled()) installFab.style.display='block';
+});
+
+installFab.addEventListener('click',async()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const choice=await deferredPrompt.userChoice;
+  if(choice.outcome==='accepted') installFab.style.display='none';
+  deferredPrompt=null;
+});
+
+window.addEventListener('appinstalled',()=>{
+  installFab.style.display='none';
 });
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('service-worker.js');
 }
 
+/* ===== كود الخريطة والإحصائيات (كما كان بدون أي تغيير) ===== */
 const map=L.map('map').setView([24.17556,47.27167],15);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSa4Qk4RNs7zPDG6RWfjFXPLGWzSHsjpc_YNic199mkg7HMItxbzfzwT0Y_KYd-zWucMCg-y2Ac06QW/pub?output=csv";
+const SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vSa4Qk4RNs7zPDG6RWfjFXPLGWzSHsjpc_YNic199mkg7HMItxbzfzwT0Y_KYd-zWucMCg-y2Ac06QW/pub?output=csv";
 const fmt=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2});
 const tr=v=>v==='commercial'?'تجاري':'سكني';
 const STATUS_LABEL={available:"متاح",reserved:"محجوز",sold:"تم البيع"};
@@ -223,7 +254,6 @@ const TYPE_COLOR={commercial:"#2e7d32",residential:"#1976d2"};
 let all=[],currentSector=null,currentBlock=null;
 const blockSelect=document.getElementById('blockSelect');
 
-// تحميل البيانات وإنشاء العلامات
 Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
   let area=0,bc=0,br=0,pc=0,pr=0;
 
@@ -243,8 +273,8 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
       {sticky:true,className:'custom-tooltip'}
     );
 
-    marker.on('click', function(){
-      const div = this._icon.querySelector('div');
+    marker.on('click',function(){
+      const div=this._icon.querySelector('div');
       div.classList.add('glow');
       this.openTooltip();
       map.flyTo(this.getLatLng(),18,{duration:1.2});
@@ -254,8 +284,9 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
     marker._visible=true;
     all.push({marker,data:d});
 
-    if(![...blockSelect.options].some(o=>o.value===d.block))
+    if(![...blockSelect.options].some(o=>o.value===d.block)){
       blockSelect.innerHTML+=`<option value="${d.block}">${d.block}</option>`;
+    }
 
     marker.addTo(map);
   });
@@ -267,24 +298,20 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
   fx5.innerHTML=`المساحة الإجمالية: ${fmt(area)} م²`;
 }});
 
-// تحديث العلامات: إظهار/إخفاء فقط
 function update(){
   all.forEach(o=>{
     const visible = (!currentSector || o.data.sector===currentSector) && (!currentBlock || o.data.block===currentBlock);
     if(visible && !o._visible){
-      o.marker.addTo(map);
-      o._visible=true;
+      o.marker.addTo(map); o._visible=true;
     } else if(!visible && o._visible){
-      map.removeLayer(o.marker);
-      o._visible=false;
+      map.removeLayer(o.marker); o._visible=false;
     }
   });
 
   if(currentBlock){
-    // تعديل الزوم ليبحث ضمن القطاع الحالي إذا محدد أو أي قطاع آخر
-    const dObj = all.find(o => o.data.block === currentBlock && (!currentSector || o.data.sector === currentSector));
+    const dObj = all.find(o => o.data.block===currentBlock && (!currentSector || o.data.sector===currentSector));
     if(dObj){
-      const d = dObj.data;
+      const d=dObj.data;
       stat1.innerHTML=`<b>القطاع:</b> ${d.sector}`;
       stat2.innerHTML=`<b>البلك:</b> ${d.block} (${tr(d.usage)})`;
       stat3.innerHTML=`<b>الحالة:</b> ${STATUS_LABEL[d.status]}`;
@@ -298,15 +325,23 @@ function update(){
   }
 }
 
-document.querySelectorAll('.sector-btn').forEach(b=>{b.onclick=()=>{
-  document.querySelectorAll('.sector-btn').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  currentSector=b.dataset.sector;
-  currentBlock=null;
-  update();
-}});
+document.querySelectorAll('.sector-btn').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.sector-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentSector=b.dataset.sector;
+    currentBlock=null;
+    update();
+  };
+});
+
 blockSelect.onchange=e=>{currentBlock=e.target.value||null;update();};
-clearBtn.onclick=()=>{currentSector=currentBlock=null;blockSelect.value='';document.querySelectorAll('.sector-btn').forEach(x=>x.classList.remove('active'));update();};
+clearBtn.onclick=()=>{
+  currentSector=currentBlock=null;
+  blockSelect.value='';
+  document.querySelectorAll('.sector-btn').forEach(x=>x.classList.remove('active'));
+  update();
+};
 </script>
 </body>
 </html>
