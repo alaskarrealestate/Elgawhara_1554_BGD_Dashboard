@@ -97,32 +97,62 @@ select,button{width:100%;padding:10px;font-size:15px;border-radius:8px;margin-to
 #clearBtn{background:#c62828;color:#fff;border:none;}
 
 /* ===== الإحصائيات ===== */
+:root{
+  --stats-bg: linear-gradient(180deg,#eef4ff,#dbeafe);
+  --stats-border:#c7d2fe;
+  --stats-card:#ffffff;
+  --stats-text:#1e293b;
+  --sector-accent:#2563eb;
+  --block-accent:#16a34a;
+}
+
 .stats{
-  background:linear-gradient(180deg,#0f172a,#111827);
+  background:var(--stats-bg);
   border-radius:16px;
-  padding:14px;
+  padding:12px;
   margin-top:12px;
-  box-shadow:0 12px 30px rgba(0,0,0,.25);
-  color:#fff;
+  border:1px solid var(--stats-border);
+  box-shadow:0 10px 25px rgba(0,0,0,.15);
+  color:var(--stats-text);
+  transition:all .3s ease;
 }
+.stats.collapsed{
+  padding:8px 12px;
+}
+.stats.collapsed .stat{display:none;}
+.stats.collapsed .title{margin:0;}
+
 .stats .title{
-  color:#e5e7eb;
   font-size:16px;
-  margin-bottom:8px;
+  font-weight:700;
+  text-align:center;
+  color:#1e3a8a;
 }
+
 .stat{
-  background:rgba(255,255,255,.08);
+  background:var(--stats-card);
   border-radius:12px;
   padding:10px 12px;
   margin:6px 0;
   font-size:14px;
   line-height:1.6;
+  border:1px solid #e5e7eb;
 }
-.stat b{color:#38bdf8}
-.stat:last-child{
-  background:linear-gradient(135deg,#2563eb,#1e40af);
-  font-weight:600;
+
+.stat.sector{
+  background:#e0e7ff;
+  border-color:#c7d2fe;
+  font-weight:700;
+  color:#1e3a8a;
 }
+
+.stat.block{
+  background:#ecfdf5;
+  border-color:#bbf7d0;
+  font-weight:700;
+  color:#065f46;
+}
+
 .footer-logo{text-align:center;margin:14px 0;}
 .footer-logo img{width:80px;}
 .contact-box{text-align:center;}
@@ -202,13 +232,14 @@ select,button{width:100%;padding:10px;font-size:15px;border-radius:8px;margin-to
     <select id="blockSelect"><option value="">اختر البلك</option></select>
     <button id="clearBtn">إلغاء التحديد</button>
 
-    <div class="stats">
+    <div class="stats collapsed">
       <div class="title">لوحة الإحصائيات</div>
       <div class="stat" id="stat1"></div>
       <div class="stat" id="stat2"></div>
       <div class="stat" id="stat3"></div>
       <div class="stat" id="stat4"></div>
       <div class="stat" id="stat5"></div>
+      <div class="stat" id="stat6"></div>
     </div>
 
     <div class="footer-logo"><img src="logo_alsakar.png" alt="Logo Footer"></div>
@@ -324,6 +355,7 @@ Papa.parse(SHEET_URL,{download:true,header:true,complete:res=>{
 
 function update(){
   let sc=0,sr=0,pc=0,pr=0,area=0;
+  const statsBox=document.querySelector('.stats');
 
   all.forEach(o=>{
     const visible = (!currentSector || o.data.sector===currentSector) && (!currentBlock || o.data.block===currentBlock);
@@ -341,25 +373,34 @@ function update(){
   });
 
   if(currentBlock){
+    statsBox.classList.remove('collapsed');
     const dObj = all.find(o=>o.data.block===currentBlock && (!currentSector || o.data.sector===currentSector));
     if(dObj){
       const d=dObj.data;
-      stat1.innerHTML=`<b>القطاع:</b> ${d.sector}`;
-      stat2.innerHTML=`<b>البلك:</b> ${d.block} (${tr(d.usage)})`;
-      stat3.innerHTML=`<b>الحالة:</b> ${STATUS_LABEL[d.status]}`;
-      stat4.innerHTML=`<b>المساحة:</b> ${fmt(d.area)} م²`;
-      stat5.innerHTML=`<b>عدد القطع:</b> ${d.plots_count}`;
+      stat1.className='stat sector';
+      stat2.className='stat block';
+      stat3.className=stat4.className=stat5.className='stat';
+      stat1.innerHTML=`القطاع: ${d.sector}`;
+      stat2.innerHTML=`البلك: ${d.block} (${tr(d.usage)})`;
+      stat3.innerHTML=`الحالة: ${STATUS_LABEL[d.status]}`;
+      stat4.innerHTML=`المساحة: ${fmt(d.area)} م²`;
+      stat5.innerHTML=`عدد القطع: ${d.plots_count}`;
       map.flyTo([+d.lat,+d.lng],18,{duration:1.2});
     }
   } else if(currentSector){
-    stat1.innerHTML=`<b>القطاع:</b> ${currentSector}`;
+    statsBox.classList.remove('collapsed');
+    stat1.className='stat sector';
+    stat2.className=stat3.className=stat4.className=stat5.className='stat';
+    stat1.innerHTML=`القطاع: ${currentSector}`;
     stat2.innerHTML=`عدد البلكات التجارية: ${sc}`;
     stat3.innerHTML=`عدد البلكات السكنية: ${sr}`;
     stat4.innerHTML=`عدد القطع التجارية: ${pc}`;
-    stat5.innerHTML=`عدد القطع السكنية: ${pr}<br>المساحة الإجمالية: ${fmt(area)} م²`;
+    stat5.innerHTML=`عدد القطع السكنية: ${pr}`;
+    stat6.innerHTML=`المساحة الإجمالية: ${fmt(area)} م²`;
     map.setView([24.17556,47.27167],15);
   } else {
-    stat1.innerHTML=stat2.innerHTML=stat3.innerHTML=stat4.innerHTML=stat5.innerHTML='';
+    statsBox.classList.add('collapsed');
+    stat1.innerHTML=stat2.innerHTML=stat3.innerHTML=stat4.innerHTML=stat5.innerHTML=stat6.innerHTML='';
     map.setView([24.17556,47.27167],15);
   }
 }
